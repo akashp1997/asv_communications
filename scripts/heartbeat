@@ -1,0 +1,40 @@
+#!/usr/bin/env python
+
+import rospy
+import requests
+import datetime
+
+import sensor_msgs.msg
+
+def callback(data):
+	lat = data.latitude
+	lon = data.longitude
+	headers = {"Content-Type": "application/json"}
+	time = datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S")
+	challenge = rospy.get_param("Challenge", "return")
+	data = '{"timestamp":"%s","challenge":"%s","position":{"datum":"WGS84","latitude":%.6f,"longitude":%.6f}}' % (time, challenge, lat, lon)
+	try:
+		host = rospy.get_param("Host")
+		teamid = rospy.get_param("TeamID")
+		course = rospy.get_param("Course")
+	except KeyError:
+		rospy.logfatal("Check if Driver has run once for the heartbeat to work")
+	try:
+		r = requests.post("%s/heartbeat/%s/%s" % (host, course, teamid), data=data)
+		rospy.loginfo(r.text)
+		if r["success"]=="true":
+			rospy.logwarn("Heartbeat failed to register with the server")
+	except:
+		rospy.logfatal("Check if request is sent")
+	#rospy.loginfo(r)
+	rate.sleep()
+
+rospy.init_node("heartbeat")
+rate = rospy.Rate(1)
+rospy.Subscriber("/boat_fix", sensor_msgs.msg.NavSatFix, callback)
+rospy.spin()
+
+
+
+
+#heartbeat(16.0405, 17.00)
